@@ -19,3 +19,9 @@ optional arguments:
   --debug        doesnt write the file, just pops open a window with it
   --scale SCALE  scale the eyes
 ```
+
+Installation:
+
+```
+pip3 install opencv-python
+```
