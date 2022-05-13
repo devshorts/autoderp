@@ -1,3 +1,4 @@
+import argparse
 import math
 import os.path
 import pathlib
@@ -89,16 +90,20 @@ def add_transparent_image(background, foreground, x_offset=None, y_offset=None):
     background[bg_y:bg_y + h, bg_x:bg_x + w] = composite
 
 
-def google_it(source, eye_source='eyes/googley_eye.png', debug=False):
+def google_it(source, eye_source='eyes/googley_eye.png', debug=False, eye_size_ratio=20):
     img = cv2.imread(source)
 
     single_eye = cv2.imread(eye_source, cv2.IMREAD_UNCHANGED)
 
     found_eyes = 0
 
+    # scale the eyes to a size about this proprotion of the face height/width
+    # tunable to adjust the googley eye size
+    ratio = eye_size_ratio
+
     for [_, eyes, (face_x, face_y, face_width, face_height)] in get_eyes(img):
-        face_x_ratio = math.floor((face_width - face_x) / 4)
-        face_y_ratio = math.floor((face_height - face_y) / 4)
+        face_x_ratio = math.floor((face_width - face_x) / ratio)
+        face_y_ratio = math.floor((face_height - face_y) / ratio)
 
         for (ex, ey, eye_distance, eye_height) in eyes:
             if found_eyes >= 2:
@@ -123,4 +128,15 @@ def google_it(source, eye_source='eyes/googley_eye.png', debug=False):
             cv2.imwrite(target, img)
 
 
-google_it(source='test/side_face.png', debug=True)
+parser = argparse.ArgumentParser(description='Make people googley.')
+parser.add_argument('path', type=str, help='the path of the image to google')
+parser.add_argument('--debug', dest='debug', action='store_true',
+                    help='doesnt write the file, just pops open a window with it')
+
+parser.add_argument('--scale', dest='scale', type=int,
+                    default=20,
+                    help='scale the eyes')
+
+args = parser.parse_args()
+
+google_it(source=args.path, debug=args.debug, eye_size_ratio=args.scale)
