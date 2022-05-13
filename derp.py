@@ -9,6 +9,8 @@ from os.path import isfile, join
 import cv2
 import numpy as np
 
+script_path = pathlib.Path(__file__).parent.absolute()
+
 
 def display(img):
     cv2.imshow('c', img)
@@ -22,7 +24,7 @@ def get_faces(img, cascade):
 
 
 def find_faces(img):
-    root = 'haar'
+    root = os.path.join(script_path, 'haar')
 
     cascades = [join(root, f) for f in listdir(root) if isfile(join(root, f)) and 'face' in f]
 
@@ -38,7 +40,7 @@ def find_faces(img):
 def get_eyes(img):
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-    eye_cascade = cv2.CascadeClassifier('haar/haarcascade_eye.xml')
+    eye_cascade = cv2.CascadeClassifier(os.path.join(script_path, 'haar/haarcascade_eye.xml'))
 
     faces = find_faces(gray)
 
@@ -48,7 +50,9 @@ def get_eyes(img):
 
         eyes = eye_cascade.detectMultiScale(roi_gray)
 
-        yield [roi_color, eyes, (x, y, w, h)]
+        sorted_eyes = sorted(eyes, key=lambda x: float(x[0]))
+
+        yield [roi_color, sorted_eyes, (x, y, w, h)]
 
 
 # stolen from: ttps://stackoverflow.com/a/71701023/310196
@@ -90,12 +94,12 @@ def add_transparent_image(background, foreground, x_offset=None, y_offset=None):
     background[bg_y:bg_y + h, bg_x:bg_x + w] = composite
 
 
-def google_it(source, eye_source='eyes/googley_eye.png', debug=False, eye_size_ratio=20):
+def google_it(source, eye_source=os.path.join(script_path, 'eyes/googley_eye.png'), debug=False, eye_size_ratio=20, choose=None):
     img = cv2.imread(source)
 
     single_eye = cv2.imread(eye_source, cv2.IMREAD_UNCHANGED)
 
-    found_eyes = 0
+    eye_index = 1
 
     # scale the eyes to a size about this proprotion of the face height/width
     # tunable to adjust the googley eye size
@@ -105,9 +109,12 @@ def google_it(source, eye_source='eyes/googley_eye.png', debug=False, eye_size_r
         face_x_ratio = math.floor((face_width - face_x) / ratio)
         face_y_ratio = math.floor((face_height - face_y) / ratio)
 
+        print('Found ' + str(len(eyes)) + ' eyes')
+
         for (ex, ey, eye_distance, eye_height) in eyes:
-            if found_eyes >= 2:
-                break
+            if choose and eye_index not in choose:
+                eye_index += 1
+                continue
 
             resized = cv2.resize(single_eye, (eye_distance + face_x_ratio, eye_height + face_y_ratio))
 
@@ -118,7 +125,7 @@ def google_it(source, eye_source='eyes/googley_eye.png', debug=False, eye_size_r
 
             add_transparent_image(img, resized, ex + face_x, ey + face_y)
 
-            found_eyes += 1
+            eye_index += 1
 
         if debug:
             display(img)
@@ -130,6 +137,9 @@ def google_it(source, eye_source='eyes/googley_eye.png', debug=False, eye_size_r
 
 parser = argparse.ArgumentParser(description='Make people googley.')
 parser.add_argument('path', type=str, help='the path of the image to google')
+parser.add_argument('--eye', dest='eyes', action='append', type=int, help='Chooses which set of eyes to use. Each eye is given a value from 1 to N',
+                    required=False)
+
 parser.add_argument('--debug', dest='debug', action='store_true',
                     help='doesnt write the file, just pops open a window with it')
 
@@ -139,4 +149,4 @@ parser.add_argument('--scale', dest='scale', type=int,
 
 args = parser.parse_args()
 
-google_it(source=args.path, debug=args.debug, eye_size_ratio=args.scale)
+google_it(source=args.path, debug=args.debug, eye_size_ratio=args.scale, choose=args.eyes)
