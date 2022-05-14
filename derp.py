@@ -12,9 +12,11 @@ import numpy as np
 script_path = pathlib.Path(__file__).parent.absolute()
 
 
-def display(img):
+def display(img, wait=False):
     cv2.imshow('c', img)
-    cv2.waitKey(0)
+
+    if wait:
+        cv2.waitKey(0)
 
 
 def get_faces(img, cascade):
@@ -94,11 +96,7 @@ def add_transparent_image(background, foreground, x_offset=None, y_offset=None):
     background[bg_y:bg_y + h, bg_x:bg_x + w] = composite
 
 
-def google_it(source, eye_source=os.path.join(script_path, 'eyes/default.png'), debug=False, eye_size_ratio=20, choose=None):
-    img = cv2.imread(source)
-
-    single_eye = cv2.imread(eye_source, cv2.IMREAD_UNCHANGED)
-
+def apply_googlyzation(img, single_eye, eye_size_ratio=20, choose=None):
     eye_index = 1
 
     # scale the eyes to a size about this proprotion of the face height/width
@@ -108,8 +106,6 @@ def google_it(source, eye_source=os.path.join(script_path, 'eyes/default.png'), 
     for [_, eyes, (face_x, face_y, face_width, face_height)] in get_eyes(img):
         face_x_ratio = math.floor((face_width - face_x) / ratio)
         face_y_ratio = math.floor((face_height - face_y) / ratio)
-
-        print('Found ' + str(len(eyes)) + ' eyes')
 
         for (ex, ey, eye_distance, eye_height) in eyes:
             if choose and eye_index not in choose:
@@ -127,17 +123,71 @@ def google_it(source, eye_source=os.path.join(script_path, 'eyes/default.png'), 
 
             eye_index += 1
 
-        if debug:
-            display(img)
-        else:
-            target = os.path.dirname(source) + '/' + pathlib.Path(source).stem + '_googled' + os.path.splitext(source)[1]
+    return img
 
-            cv2.imwrite(target, img)
+
+def image_googley(source, eye_source=os.path.join(script_path, 'eyes/default.png'), debug=False, eye_size_ratio=20, choose=None):
+    img = cv2.imread(source)
+
+    single_eye = cv2.imread(eye_source, cv2.IMREAD_UNCHANGED)
+
+    googly = apply_googlyzation(img, single_eye, eye_size_ratio, choose)
+
+    if debug:
+        display(googly, wait=True)
+    else:
+        target = os.path.dirname(source) + '/' + pathlib.Path(source).stem + '_googled' + os.path.splitext(source)[1]
+
+        cv2.imwrite(target, googly)
+
+
+def video_googley(source, eye_source=os.path.join(script_path, 'eyes/default.png'), eye_size_ratio=20, debug=False, choose=None):
+    cap = cv2.VideoCapture(source)
+
+    single_eye = cv2.imread(eye_source, cv2.IMREAD_UNCHANGED)
+
+    frame_width = int(cap.get(3))
+
+    frame_height = int(cap.get(4))
+
+    out = None
+
+    if not debug:
+        target = os.path.dirname(source) + '/' + pathlib.Path(source).stem + '_googled' + os.path.splitext(source)[1]
+
+        out = cv2.VideoWriter(target,cv2.VideoWriter_fourcc('M','J','P','G'), 10, (frame_width,frame_height))
+
+    while cap.isOpened():
+        ret, frame = cap.read()
+
+        small = cv2.resize(frame, (math.floor(frame_width/2), math.floor(frame_height/2)))
+
+        googly = apply_googlyzation(small, single_eye, eye_size_ratio, choose)
+
+        if debug:
+            display(googly)
+
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+
+        else:
+            out.write(googly)
+
+    cap.release()
+
+    if not debug:
+        out.release()
 
 
 parser = argparse.ArgumentParser(description='Make people googley.')
 
-parser.add_argument('path', type=str, help='The path of the image to make googley')
+parser.add_argument('--path', type=str, help='The path of the image to make googley', required=False)
+
+parser.add_argument('--video', dest='video', action='store_true',  help='If this is a video or not',
+                    required=False)
+
+parser.add_argument('--webcam', dest='webcam', type=int,  help='If this is a webcam or not',
+                    required=False)
 
 parser.add_argument('--eye', dest='eyes', action='append', type=int, help='Chooses which set of eyes to use. Each eye is given a value from 1 to N',
                     required=False)
@@ -154,10 +204,27 @@ parser.add_argument('--scale', dest='scale', type=int,
 
 args = parser.parse_args()
 
-google_it(
-    source=args.path,
-    debug=args.debug,
-    eye_size_ratio=args.scale,
-    choose=args.eyes,
-    eye_source=os.path.join(script_path, "eyes", args.type + ".png")
-)
+if args.video:
+    video_googley(
+        source=args.path,
+        eye_size_ratio=args.scale,
+        choose=args.eyes,
+        debug=args.debug,
+        eye_source=os.path.join(script_path, "eyes", args.type + ".png")
+    )
+if args.webcam:
+    video_googley(
+        source=args.webcam,
+        eye_size_ratio=args.scale,
+        debug=True,
+        choose=args.eyes,
+        eye_source=os.path.join(script_path, "eyes", args.type + ".png")
+    )
+else:
+    image_googley(
+        source=args.path,
+        debug=args.debug,
+        eye_size_ratio=args.scale,
+        choose=args.eyes,
+        eye_source=os.path.join(script_path, "eyes", args.type + ".png")
+    )
