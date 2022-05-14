@@ -94,7 +94,7 @@ def add_transparent_image(background, foreground, x_offset=None, y_offset=None):
     background[bg_y:bg_y + h, bg_x:bg_x + w] = composite
 
 
-def google_it(source, eye_source=os.path.join(script_path, 'eyes/googley_eye.png'), debug=False, eye_size_ratio=20, choose=None):
+def google_it(source, eye_source=os.path.join(script_path, 'eyes/default.png'), debug=False, eye_size_ratio=20, choose=None):
     img = cv2.imread(source)
 
     single_eye = cv2.imread(eye_source, cv2.IMREAD_UNCHANGED)
@@ -136,17 +136,28 @@ def google_it(source, eye_source=os.path.join(script_path, 'eyes/googley_eye.png
 
 
 parser = argparse.ArgumentParser(description='Make people googley.')
-parser.add_argument('path', type=str, help='the path of the image to google')
+
+parser.add_argument('path', type=str, help='The path of the image to make googley')
+
 parser.add_argument('--eye', dest='eyes', action='append', type=int, help='Chooses which set of eyes to use. Each eye is given a value from 1 to N',
                     required=False)
 
 parser.add_argument('--debug', dest='debug', action='store_true',
-                    help='doesnt write the file, just pops open a window with it')
+                    help='Doesnt write the file, just pops open a window with it')
+
+parser.add_argument('--type', dest='type', type=str, choices={"default", "shape1", "shape2"}, default='default',
+                    help='Choose your eye type!')
 
 parser.add_argument('--scale', dest='scale', type=int,
                     default=20,
-                    help='scale the eyes')
+                    help='Scale the eyes. Smaller number is larger')
 
 args = parser.parse_args()
 
-google_it(source=args.path, debug=args.debug, eye_size_ratio=args.scale, choose=args.eyes)
+google_it(
+    source=args.path,
+    debug=args.debug,
+    eye_size_ratio=args.scale,
+    choose=args.eyes,
+    eye_source=os.path.join(script_path, "eyes", args.type + ".png")
+)
