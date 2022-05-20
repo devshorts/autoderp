@@ -6,6 +6,8 @@ This is just some crappy python from https://pythonprogramming.net/haar-cascade-
 
 It can work (poorly) on images, videos, even webcams.
 
+Use different shapes! Derp all your friends!
+
 <img width="1559" alt="image" src="https://user-images.githubusercontent.com/1799346/168400525-363600a6-aaac-4f75-9420-4543a3c0a35e.png">
 
 ```
