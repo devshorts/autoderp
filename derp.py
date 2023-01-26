@@ -1,13 +1,12 @@
 import argparse
+import cv2
 import math
+import numpy as np
 import os.path
 import pathlib
 import random
 from os import listdir
 from os.path import isfile, join
-
-import cv2
-import numpy as np
 
 script_path = pathlib.Path(__file__).parent.absolute()
 
@@ -117,7 +116,7 @@ def apply_googlyzation(img, single_eye, eye_size_ratio=20, choose=None):
             rotation = random.randint(0, 3)
 
             if rotation > 0:
-                resized = cv2.rotate(resized, [cv2.cv2.ROTATE_90_CLOCKWISE, cv2.cv2.ROTATE_90_COUNTERCLOCKWISE, cv2.cv2.ROTATE_180][rotation - 1])
+                resized = cv2.rotate(resized, [cv2.ROTATE_90_CLOCKWISE, cv2.ROTATE_90_COUNTERCLOCKWISE, cv2.ROTATE_180][rotation - 1])
 
             add_transparent_image(img, resized, ex + face_x, ey + face_y)
 
